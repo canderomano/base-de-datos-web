@@ -89,4 +89,4 @@ export interface Progress {
   answeredCount: number;
 }
 
-export type View = 'dashboard'|'modules'|'module-detail'|'flashcards'|'quiz'|'lab'|'simulacro'|'session'|'review'|'favorites'|'errors'|'search';
+export type View = 'dashboard'|'modules'|'module-detail'|'flashcards'|'quiz'|'lab'|'simulacro'|'session'|'review'|'favorites'|'errors'|'search'|'evaluative';

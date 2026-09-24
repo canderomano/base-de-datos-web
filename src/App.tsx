@@ -5,6 +5,7 @@ import { questions } from './data/questions'
 import { exercises } from './data/exercises'
 import { commonErrors } from './data/commonErrors'
 import { achievements } from './data/achievements'
+import { evaluativeQuestions } from './data/evaluative'
 import type { View, Progress } from './types'
 import { loadProgress, saveProgress, getTheme, setTheme } from './utils/storage'
 import { xpToLevel, xpProgress } from './utils/helpers'
@@ -72,6 +73,7 @@ export default function App(){
     {id:'modules', label:'Temario', icon:'📚'},
     {id:'flashcards', label:'Flashcards', icon:'🃏'},
     {id:'quiz', label:'Cuestionarios', icon:'🧠'},
+    {id:'evaluative', label:'Cuest. Evaluativo', icon:'📝'},
     {id:'lab', label:'Laboratorio', icon:'💻'},
     {id:'simulacro', label:'Simulacro', icon:'🎯'},
     {id:'session', label:'Sesión', icon:'⚡'},
@@ -224,6 +226,7 @@ export default function App(){
             {view==='review' && <ReviewView progress={progress}/>}
             {view==='favorites' && <FavoritesView progress={progress} setProgress={setProgress}/>}
             {view==='errors' && <ErrorsView/>}
+            {view==='evaluative' && <EvaluativeView progress={progress} setProgress={setProgress} showToast={showToast} />}
             {view==='search' && <SearchView search={search} results={searchResults} setView={setView} setSelectedModule={setSelectedModule}/>}
           </main>
 
@@ -902,6 +905,219 @@ function ErrorsView(){
             <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm">{e.explanation}</div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function EvaluativeView({progress,setProgress,showToast}:any){
+  const [started,setStarted]=useState(false)
+  const [idx,setIdx]=useState(0)
+  const [answers,setAnswers]=useState<Record<string,number>>({})
+  const [finished,setFinished]=useState(false)
+  const [showResult,setShowResult]=useState(false)
+  const [filter,setFilter]=useState<'all'|'correct'|'incorrect'>('all')
+  const total = evaluativeQuestions.length
+  const answeredCount = Object.keys(answers).length
+  const correctCount = evaluativeQuestions.filter(q=> answers[q.id]===q.correct).length
+  const pct = total? Math.round(correctCount/total*100):0
+  const progressPct = Math.round((answeredCount/total)*100)
+
+  const handleSelect=(qid:string, opt:number)=>{
+    if(finished) return
+    setAnswers(prev=> ({...prev, [qid]:opt}))
+  }
+  const handleFinish=()=>{
+    if(answeredCount < total){
+      if(!confirm(`Respondiste ${answeredCount}/${total}. ¿Entregar igual?`)) return
+    }
+    setFinished(true)
+    setShowResult(true)
+    const newCorrect = evaluativeQuestions.filter(q=> answers[q.id]===q.correct).map(q=>q.id)
+    setProgress((p:any)=> ({...p, xp: p.xp + Math.round(correctCount * 1.5 + 10), answeredCount: p.answeredCount + answeredCount }))
+    showToast(`Evaluativo finalizado: ${correctCount}/${total} (${pct}%)`)
+  }
+  const reset=()=>{
+    setAnswers({}); setIdx(0); setStarted(false); setFinished(false); setShowResult(false); setFilter('all')
+  }
+
+  if(!started){
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="rounded-[20px] sm:rounded-[24px] bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-600 text-white p-6 sm:p-8 relative overflow-hidden">
+          <div className="absolute -right-10 -top-10 w-64 h-64 bg-white/10 rounded-full blur-2xl"/>
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-xs font-bold tracking-widest">📝 CUESTIONARIO EVALUATIVO</div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold mt-3">Cuestionario Evaluativo — 50 preguntas</h1>
+            <p className="text-white/90 mt-2 max-w-2xl text-sm sm:text-base">Todas las preguntas del evaluativo real, con respuestas correctas validadas. Practicá en condiciones de examen, con navegación libre y revisión detallada.</p>
+            <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3 max-w-md">
+              <div className="bg-white rounded-xl p-3 text-center text-slate-800"><div className="font-black text-lg">50</div><div className="text-[11px] text-slate-500 font-semibold">Preguntas</div></div>
+              <div className="bg-white rounded-xl p-3 text-center text-slate-800"><div className="font-black text-lg">A-E</div><div className="text-[11px] text-slate-500 font-semibold">Opciones</div></div>
+              <div className="bg-white rounded-xl p-3 text-center text-slate-800"><div className="font-black text-lg">~30m</div><div className="text-[11px] text-slate-500 font-semibold">Estimado</div></div>
+            </div>
+            <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              <button onClick={()=>setStarted(true)} className="px-7 py-3.5 rounded-xl bg-white text-violet-700 font-extrabold hover:bg-slate-50 shadow-lg">Comenzar evaluativo →</button>
+              <div className="px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-sm text-white/90">✔ Respuestas oficiales incluidas • ✔ Revisión por tema • ✔ Guarda XP</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+            <div className="font-bold">¿Cómo funciona?</div>
+            <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-400 list-disc list-inside">
+              <li>Navegá con grilla 1-50, podés saltear y volver.</li>
+              <li>Elegí A-E por pregunta, se guarda automático.</li>
+              <li>Entregá y vas a ver nota, detalle por pregunta y explicación.</li>
+              <li>Progreso guardado en LocalStorage + XP.</li>
+            </ul>
+          </div>
+          <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+            <div className="font-bold">Temario cubierto</div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {['Cluster/BD/Schema','search_path','EXISTS/IN','HAVING','Orden SQL','LIKE','Subconsultas','CTE','FK CASCADE','LIMIT/OFFSET'].map(t=> <span key={t} className="px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border">{t}</span>)}
+            </div>
+            <div className="mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-200">💡 Tip: Usá el evaluativo como simulacro final antes del examen. Apuntá a 80%+.</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if(showResult){
+    const filtered = evaluativeQuestions.filter(q=>{
+      if(filter==='all') return true
+      if(filter==='correct') return answers[q.id]===q.correct
+      return answers[q.id]!==q.correct
+    })
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-6 text-white text-center">
+          <div className="text-white/80 text-xs font-bold tracking-widest">RESULTADO EVALUATIVO</div>
+          <div className="text-5xl font-black mt-1">{pct}%</div>
+          <div className="text-white/90 mt-1">{correctCount}/{total} correctas • {answeredCount} respondidas</div>
+          <div className="mt-3 flex justify-center gap-2">
+            {pct>=80 && <span className="px-3 py-1 rounded-full bg-white text-indigo-700 text-sm font-bold">¡Excelente!</span>}
+            {pct>=60 && pct<80 && <span className="px-3 py-1 rounded-full bg-white/20 border border-white/30 text-sm font-bold">Aprobado</span>}
+            {pct<60 && <span className="px-3 py-1 rounded-full bg-red-500 text-white text-sm font-bold">A repasar</span>}
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2 max-w-md mx-auto">
+            <div className="bg-white/15 backdrop-blur rounded-xl p-3 border border-white/20"><div className="font-black text-xl">{correctCount}</div><div className="text-xs opacity-80">Correctas</div></div>
+            <div className="bg-white/15 backdrop-blur rounded-xl p-3 border border-white/20"><div className="font-black text-xl">{total-correctCount}</div><div className="text-xs opacity-80">Incorrectas</div></div>
+            <div className="bg-white/15 backdrop-blur rounded-xl p-3 border border-white/20"><div className="font-black text-xl">{total-answeredCount}</div><div className="text-xs opacity-80">Sin resp.</div></div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button onClick={()=>setFilter('all')} className={`px-4 py-2 rounded-xl text-sm font-semibold border ${filter==='all'?'bg-slate-900 text-white dark:bg-white dark:text-slate-900':'bg-white dark:bg-slate-800'}`}>Todas ({total})</button>
+          <button onClick={()=>setFilter('correct')} className={`px-4 py-2 rounded-xl text-sm font-semibold border ${filter==='correct'?'bg-emerald-600 text-white':'bg-white dark:bg-slate-800'}`}>Correctas ({correctCount})</button>
+          <button onClick={()=>setFilter('incorrect')} className={`px-4 py-2 rounded-xl text-sm font-semibold border ${filter==='incorrect'?'bg-red-600 text-white':'bg-white dark:bg-slate-800'}`}>Incorrectas ({total-correctCount})</button>
+          <button onClick={()=>setShowResult(false)} className="ml-auto px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Volver al cuestionario</button>
+          <button onClick={reset} className="px-4 py-2 rounded-xl border bg-white dark:bg-slate-800 text-sm font-semibold">Reiniciar</button>
+        </div>
+
+        <div className="space-y-4">
+          {filtered.map((q, i)=> {
+            const userAns = answers[q.id]
+            const isCorrect = userAns === q.correct
+            const idxReal = evaluativeQuestions.findIndex(x=>x.id===q.id)
+            return (
+              <div key={q.id} className={`bg-white dark:bg-[#171923] rounded-2xl border p-5 ${isCorrect?'border-emerald-200 dark:border-emerald-900':'border-red-200 dark:border-red-900'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${isCorrect?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'}`}>#{idxReal+1} {isCorrect?'✓ Correcta':'✗ Incorrecta'}</div>
+                  <span className="text-xs text-slate-500">Tu Rta: {userAns!==undefined ? String.fromCharCode(65+userAns) : '—'} • Correcta: {String.fromCharCode(65+q.correct)}</span>
+                </div>
+                <div className="font-semibold mt-2">{q.question}</div>
+                <div className="mt-3 space-y-1.5">
+                  {q.options.map((op, oi)=>{
+                    const isU = oi===userAns
+                    const isC = oi===q.correct
+                    let cls="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                    if(isC) cls="bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 text-emerald-800 dark:text-emerald-200 font-semibold"
+                    else if(isU && !isC) cls="bg-red-50 dark:bg-red-950/30 border-red-300 text-red-800 dark:text-red-200"
+                    return <div key={oi} className={`p-2.5 rounded-xl border text-sm flex gap-2 ${cls}`}><span className="font-bold">{String.fromCharCode(65+oi)}.</span><span>{op}</span>{isC && <span className="ml-auto">✓</span>}</div>
+                  })}
+                </div>
+                <div className="mt-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 text-sm text-slate-700 dark:text-slate-300">
+                  <span className="font-semibold text-indigo-700 dark:text-indigo-300">Explicación:</span> {q.explanation}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const q = evaluativeQuestions[idx]
+  const letters = ['A','B','C','D','E']
+  return (
+    <div className="max-w-6xl mx-auto grid lg:grid-cols-[280px_1fr] gap-4 sm:gap-6">
+      {/* Grilla navegable */}
+      <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 h-fit lg:sticky lg:top-[72px]">
+        <div className="flex items-center justify-between">
+          <div className="font-bold text-sm">Preguntas</div>
+          <span className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800">{answeredCount}/{total}</span>
+        </div>
+        <div className="mt-3 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-violet-600 to-indigo-600 transition-all" style={{width:`${progressPct}%`}}/></div>
+        <div className="mt-4 grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-5 gap-1.5">
+          {evaluativeQuestions.map((qq, i)=>{
+            const answered = answers[qq.id]!==undefined
+            const isCurrent = i===idx
+            return (
+              <button key={qq.id} onClick={()=>setIdx(i)} className={`h-9 rounded-xl text-sm font-bold border transition flex items-center justify-center ${isCurrent?'bg-indigo-600 text-white border-indigo-600 shadow': answered?'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200':'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
+                {i+1}
+              </button>
+            )
+          })}
+        </div>
+        <div className="mt-4 flex gap-2 text-[11px]">
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-200 border border-emerald-300"/> Respondida</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-slate-100 border"/> Pendiente</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-indigo-600"/> Actual</span>
+        </div>
+        <button onClick={handleFinish} className="mt-4 w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700">Entregar evaluativo</button>
+        <button onClick={()=>{ if(confirm('¿Salir sin guardar?')) setStarted(false)}} className="mt-2 w-full py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-sm font-semibold">Salir</button>
+        <div className="mt-3 text-xs text-slate-500 text-center">Podés entregar con preguntas sin responder.</div>
+      </div>
+
+      {/* Pregunta actual */}
+      <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="px-2.5 py-1 rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 font-bold">Pregunta {idx+1} / {total}</span>
+          <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800">ID {q.id}</span>
+          {answers[q.id]!==undefined ? <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Respondida: {letters[answers[q.id]]}</span> : <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">Pendiente</span>}
+          <span className="ml-auto text-slate-500">{progressPct}% completado</span>
+        </div>
+
+        <h2 className="font-bold text-[15px] sm:text-lg leading-relaxed mt-4">{q.question}</h2>
+
+        <div className="mt-4 space-y-2">
+          {q.options.map((op, oi)=>{
+            const selected = answers[q.id]===oi
+            return (
+              <button key={oi} onClick={()=>handleSelect(q.id, oi)} className={`w-full text-left p-3 sm:p-3.5 rounded-xl border text-sm flex gap-3 items-start transition ${selected?'bg-indigo-600 text-white border-indigo-600 shadow':'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700'}`}>
+                <span className={`w-7 h-7 rounded-full grid place-items-center font-black text-xs shrink-0 ${selected?'bg-white text-indigo-600':'bg-white dark:bg-slate-900 border'}`}>{letters[oi]}</span>
+                <span className="flex-1 leading-snug">{op}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {answers[q.id]!==undefined && !finished && (
+          <div className="mt-4 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 text-sm">
+            Seleccionaste <b>{letters[answers[q.id]]}</b>. Podés cambiar antes de entregar. La corrección se ve al entregar.
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-between gap-3">
+          <button disabled={idx===0} onClick={()=>setIdx(i=>Math.max(0,i-1))} className="px-5 py-3 rounded-xl border bg-white dark:bg-slate-800 font-semibold disabled:opacity-40 text-sm">← Anterior</button>
+          {idx===total-1 ? <button onClick={handleFinish} className="px-7 py-3 rounded-xl bg-emerald-600 text-white font-bold">Entregar →</button> : <button onClick={()=>setIdx(i=>Math.min(total-1,i+1))} className="px-7 py-3 rounded-xl bg-indigo-600 text-white font-bold">Siguiente →</button>}
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <button onClick={handleFinish} className="text-sm text-slate-500 underline">Entregar y ver resultado</button>
+        </div>
       </div>
     </div>
   )
