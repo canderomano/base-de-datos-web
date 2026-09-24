@@ -33,6 +33,6 @@ export function saveProgress(p: Progress) {
 export function getTheme(): 'light'|'dark' {
   const v = localStorage.getItem(THEME_KEY) as any;
   if (v) return v;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'light';
 }
 export function setTheme(t:'light'|'dark'){ localStorage.setItem(THEME_KEY, t); }
