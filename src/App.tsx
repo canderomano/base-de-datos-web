@@ -917,6 +917,8 @@ function EvaluativeView({progress,setProgress,showToast}:any){
   const [finished,setFinished]=useState(false)
   const [showResult,setShowResult]=useState(false)
   const [filter,setFilter]=useState<'all'|'correct'|'incorrect'>('all')
+  const [instantMode,setInstantMode]=useState(false)
+  const [revealed,setRevealed]=useState<Record<string,boolean>>({})
   const total = evaluativeQuestions.length
   const answeredCount = Object.keys(answers).length
   const correctCount = evaluativeQuestions.filter(q=> answers[q.id]===q.correct).length
@@ -926,6 +928,16 @@ function EvaluativeView({progress,setProgress,showToast}:any){
   const handleSelect=(qid:string, opt:number)=>{
     if(finished) return
     setAnswers(prev=> ({...prev, [qid]:opt}))
+    if(instantMode){
+      // no auto reveal, user will confirm
+    }
+  }
+  const handleConfirm=()=>{
+    const q = evaluativeQuestions[idx]
+    if(answers[q.id]===undefined) return
+    setRevealed(prev=> ({...prev, [q.id]:true}))
+    const isCorrect = answers[q.id]===q.correct
+    showToast(isCorrect ? '¡Correcto! ✓' : `Incorrecto. Correcta: ${String.fromCharCode(65+q.correct)}`)
   }
   const handleFinish=()=>{
     if(answeredCount < total){
@@ -938,7 +950,7 @@ function EvaluativeView({progress,setProgress,showToast}:any){
     showToast(`Evaluativo finalizado: ${correctCount}/${total} (${pct}%)`)
   }
   const reset=()=>{
-    setAnswers({}); setIdx(0); setStarted(false); setFinished(false); setShowResult(false); setFilter('all')
+    setAnswers({}); setIdx(0); setStarted(false); setFinished(false); setShowResult(false); setFilter('all'); setRevealed({}); setInstantMode(false)
   }
 
   if(!started){
@@ -1060,20 +1072,36 @@ function EvaluativeView({progress,setProgress,showToast}:any){
           <span className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800">{answeredCount}/{total}</span>
         </div>
         <div className="mt-3 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-violet-600 to-indigo-600 transition-all" style={{width:`${progressPct}%`}}/></div>
+        {/* Toggle corrección instantánea */}
+        <div className="mt-4 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-xs font-bold text-violet-800 dark:text-violet-200">Corrección instantánea</div>
+              <div className="text-[11px] text-violet-600 dark:text-violet-300 leading-tight">{instantMode ? 'Te dice al confirmar si está bien' : 'Solo al entregar ves la nota'}</div>
+            </div>
+            <button onClick={()=>setInstantMode(v=>!v)} className={`w-11 h-6 rounded-full relative transition shrink-0 ${instantMode?'bg-violet-600':'bg-slate-300 dark:bg-slate-600'}`}>
+              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition ${instantMode?'left-5':'left-0.5'}`}/>
+            </button>
+          </div>
+          <div className="mt-2 text-[11px] text-slate-500">{instantMode ? '✔ Activada: Confirmar → ver feedback' : '○ Desactivada'}</div>
+        </div>
         <div className="mt-4 grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-5 gap-1.5">
           {evaluativeQuestions.map((qq, i)=>{
             const answered = answers[qq.id]!==undefined
             const isCurrent = i===idx
+            const wasRevealed = !!revealed[qq.id]
+            const isCorrectRevealed = wasRevealed && answers[qq.id]===qq.correct
             return (
-              <button key={qq.id} onClick={()=>setIdx(i)} className={`h-9 rounded-xl text-sm font-bold border transition flex items-center justify-center ${isCurrent?'bg-indigo-600 text-white border-indigo-600 shadow': answered?'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200':'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
+              <button key={qq.id} onClick={()=>setIdx(i)} className={`h-9 rounded-xl text-sm font-bold border transition flex items-center justify-center ${isCurrent?'bg-indigo-600 text-white border-indigo-600 shadow': wasRevealed ? (isCorrectRevealed?'bg-emerald-500 text-white border-emerald-500':'bg-red-500 text-white border-red-500') : answered?'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200':'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                 {i+1}
               </button>
             )
           })}
         </div>
-        <div className="mt-4 flex gap-2 text-[11px]">
+        <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500"/> Correcta</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-500"/> Incorrecta</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-200 border border-emerald-300"/> Respondida</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-slate-100 border"/> Pendiente</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-indigo-600"/> Actual</span>
         </div>
         <button onClick={handleFinish} className="mt-4 w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700">Entregar evaluativo</button>
@@ -1095,19 +1123,54 @@ function EvaluativeView({progress,setProgress,showToast}:any){
         <div className="mt-4 space-y-2">
           {q.options.map((op, oi)=>{
             const selected = answers[q.id]===oi
+            const isRevealed = !!revealed[q.id]
+            const isCorrectOpt = oi===q.correct
+            let btnCls = 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700'
+            if(instantMode && isRevealed){
+              if(isCorrectOpt) btnCls='bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 text-emerald-800 dark:text-emerald-200'
+              else if(selected && !isCorrectOpt) btnCls='bg-red-50 dark:bg-red-950/30 border-red-300 text-red-800 dark:text-red-200'
+              else btnCls='opacity-60 bg-slate-50 dark:bg-slate-800 border-slate-200'
+            } else if(selected){
+              btnCls='bg-indigo-600 text-white border-indigo-600 shadow'
+            }
             return (
-              <button key={oi} onClick={()=>handleSelect(q.id, oi)} className={`w-full text-left p-3 sm:p-3.5 rounded-xl border text-sm flex gap-3 items-start transition ${selected?'bg-indigo-600 text-white border-indigo-600 shadow':'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700'}`}>
-                <span className={`w-7 h-7 rounded-full grid place-items-center font-black text-xs shrink-0 ${selected?'bg-white text-indigo-600':'bg-white dark:bg-slate-900 border'}`}>{letters[oi]}</span>
+              <button key={oi} onClick={()=>handleSelect(q.id, oi)} disabled={!!(instantMode && revealed[q.id])} className={`w-full text-left p-3 sm:p-3.5 rounded-xl border text-sm flex gap-3 items-start transition ${btnCls} ${instantMode && revealed[q.id] ? 'cursor-default' : ''}`}>
+                <span className={`w-7 h-7 rounded-full grid place-items-center font-black text-xs shrink-0 ${selected && !instantMode ? 'bg-white text-indigo-600' : instantMode && isRevealed && isCorrectOpt ? 'bg-emerald-600 text-white' : instantMode && isRevealed && selected && !isCorrectOpt ? 'bg-red-600 text-white' : selected ? 'bg-white text-indigo-600' : 'bg-white dark:bg-slate-900 border'}`}>{letters[oi]}</span>
                 <span className="flex-1 leading-snug">{op}</span>
+                {instantMode && isRevealed && isCorrectOpt && <span className="text-emerald-600 font-bold">✓</span>}
+                {instantMode && isRevealed && selected && !isCorrectOpt && <span className="text-red-600 font-bold">✗</span>}
               </button>
             )
           })}
         </div>
 
-        {answers[q.id]!==undefined && !finished && (
-          <div className="mt-4 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 text-sm">
-            Seleccionaste <b>{letters[answers[q.id]]}</b>. Podés cambiar antes de entregar. La corrección se ve al entregar.
+        {/* Botón confirmar + feedback instantáneo */}
+        {instantMode ? (
+          <div className="mt-4 space-y-3">
+            {!revealed[q.id] ? (
+              <button disabled={answers[q.id]===undefined} onClick={handleConfirm} className="w-full py-3 rounded-xl bg-violet-600 text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-violet-700">
+                {answers[q.id]===undefined ? 'Seleccioná una opción' : `Confirmar respuesta ${letters[answers[q.id]]} → Ver corrección`}
+              </button>
+            ) : (
+              <div className={`p-4 rounded-xl border ${answers[q.id]===q.correct ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800'}`}>
+                <div className={`font-bold ${answers[q.id]===q.correct ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
+                  {answers[q.id]===q.correct ? '¡Correcto! ✓' : `Incorrecto ✗ — Correcta: ${letters[q.correct]}`}
+                </div>
+                <div className="text-sm mt-1 text-slate-700 dark:text-slate-300">{q.explanation}</div>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={()=> setRevealed(prev=>{ const n={...prev}; delete n[q.id]; return n})} className="px-4 py-2 rounded-xl border bg-white dark:bg-slate-800 text-sm font-semibold">Cambiar respuesta</button>
+                  <button onClick={()=> setIdx(i=>Math.min(total-1,i+1))} className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold">Siguiente →</button>
+                </div>
+              </div>
+            )}
+            {answers[q.id]!==undefined && !revealed[q.id] && <div className="text-xs text-slate-500 text-center">Confirmá para ver si está bien. Podés desactivar el modo arriba.</div>}
           </div>
+        ) : (
+          answers[q.id]!==undefined && !finished && (
+            <div className="mt-4 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 text-sm">
+              Seleccionaste <b>{letters[answers[q.id]]}</b>. Podés cambiar antes de entregar. {instantMode ? '' : 'Activá corrección instantánea para ver al momento.'}
+            </div>
+          )
         )}
 
         <div className="mt-6 flex justify-between gap-3">
