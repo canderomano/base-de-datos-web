@@ -124,35 +124,83 @@ export default function App(){
           </div>
         </aside>
 
+        {/* Mobile Drawer */}
+        {mobileMenu && (
+          <div className="lg:hidden fixed inset-0 z-40 flex">
+            <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={()=>setMobileMenu(false)} />
+            <div className="w-[85%] max-w-[320px] bg-white dark:bg-[#171923] h-full shadow-2xl flex flex-col animate-[slideIn_0.2s_ease]">
+              <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <Logo/>
+                <button onClick={()=>setMobileMenu(false)} className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">✕</button>
+              </div>
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3">
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
+                  <input autoFocus value={search} onChange={e=>{setSearch(e.target.value); if(e.target.value) setView('search')}} placeholder="Buscar: exists, join, CTE..." className="w-full pl-9 pr-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-300 outline-none text-sm"/>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="flex-1 px-3 py-2 rounded-xl bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-300 border border-orange-200 dark:border-orange-900 text-center font-semibold">🔥 Racha {progress.streak} días</span>
+                  <span className="px-3 py-2 rounded-xl bg-indigo-600 text-white font-bold">{pct}%</span>
+                </div>
+              </div>
+              <nav className="flex-1 p-3 space-y-1 overflow-auto">
+                {nav.map(n=>(
+                  <button key={n.id} onClick={()=>{setView(n.id as View); setMobileMenu(false)}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition ${view===n.id?'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow':'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                    <span className="text-lg">{n.icon}</span>{n.label}
+                    {view===n.id && <span className="ml-auto">›</span>}
+                  </button>
+                ))}
+              </nav>
+              <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Modo {theme==='dark'?'oscuro':'claro'}</span>
+                  <button onClick={()=>setThemeState(theme==='dark'?'light':'dark')} className="w-12 h-7 rounded-full bg-slate-200 dark:bg-slate-700 relative transition">
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition ${theme==='dark'?'left-6':'left-1'}`}/>
+                  </button>
+                </div>
+                <div className="mt-3 p-3 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/20 border border-indigo-100 dark:border-indigo-900/30">
+                  <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Agustín Molina</div>
+                  <div className="text-xs text-slate-500">Final — Base de Datos 2 • Nv {level} • {progress.xp} XP</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main */}
         <div className="flex-1 min-w-0">
           {/* Topbar */}
-          <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#171923]/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
-            <div className="px-4 lg:px-8 py-3 flex items-center gap-3">
-              <div className="lg:hidden"><Logo/></div>
-              <div className="flex-1 max-w-xl relative hidden sm:block">
+          <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#171923]/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800">
+            <div className="px-3 sm:px-4 lg:px-8 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
+              <button onClick={()=>setMobileMenu(true)} className="lg:hidden p-2.5 -ml-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <span className="block w-5 h-0.5 bg-slate-700 dark:bg-slate-300 rounded mb-1"></span>
+                <span className="block w-5 h-0.5 bg-slate-700 dark:bg-slate-300 rounded mb-1"></span>
+                <span className="block w-5 h-0.5 bg-slate-700 dark:bg-slate-300 rounded"></span>
+              </button>
+              <div className="lg:hidden flex-1 min-w-0"><Logo/></div>
+              <div className="hidden sm:flex flex-1 max-w-xl relative">
                 <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
                 <input value={search} onChange={e=>{setSearch(e.target.value); if(e.target.value) setView('search')}} placeholder="Buscar: exists, join, CTE..." className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-300 outline-none text-sm"/>
               </div>
-              <div className="flex items-center gap-2 ml-auto">
-                <div className="hidden md:flex items-center gap-2 text-xs">
-                  <span className="px-3 py-1.5 rounded-full bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-300 border border-orange-200 dark:border-orange-900">🔥 Racha {progress.streak} días</span>
-                  <span className="px-3 py-1.5 rounded-full bg-indigo-600 text-white font-semibold">{progress.streak>1?'•':'•'} {pct}%</span>
-                </div>
-                <button onClick={()=>setMobileMenu(!mobileMenu)} className="lg:hidden p-2 rounded-lg border dark:border-slate-700">☰</button>
+              <div className="hidden lg:flex items-center gap-2 ml-auto">
+                <span className="px-3 py-1.5 rounded-full bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-300 border border-orange-200 dark:border-orange-900 text-xs font-semibold">🔥 Racha {progress.streak} días</span>
+                <span className="px-3 py-1.5 rounded-full bg-indigo-600 text-white font-bold text-xs">{pct}%</span>
+              </div>
+              <div className="flex lg:hidden items-center gap-1.5 ml-auto">
+                <span className="px-2.5 py-1 rounded-full bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-300 border text-xs font-bold">🔥{progress.streak}</span>
+                <span className="px-2.5 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold">{pct}%</span>
               </div>
             </div>
-            {mobileMenu && (
-              <div className="lg:hidden px-4 pb-4 grid grid-cols-2 gap-2">
-                {nav.map(n=>(
-                  <button key={n.id} onClick={()=>{setView(n.id as View); setMobileMenu(false)}} className={`px-3 py-2 rounded-xl text-sm ${view===n.id?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>{n.icon} {n.label}</button>
-                ))}
-                <input value={search} onChange={e=>{setSearch(e.target.value); if(e.target.value) setView('search')}} placeholder="Buscar..." className="col-span-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border"/>
+            {/* Mobile search bar visible when not drawer */}
+            <div className="sm:hidden px-3 pb-3">
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-400 text-sm">🔍</span>
+                <input value={search} onChange={e=>{setSearch(e.target.value); if(e.target.value) setView('search')}} placeholder="Buscar tema, SQL, tarjeta..." className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-300 outline-none text-sm"/>
               </div>
-            )}
+            </div>
           </header>
 
-          <main className="px-4 lg:px-8 py-6 pb-24 lg:pb-8">
+          <main className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6 pb-28 sm:pb-24 lg:pb-8">
             {view==='dashboard' && (
               <Dashboard
                 pct={pct} completedCount={completedCount} totalConcepts={totalConcepts}
@@ -179,17 +227,26 @@ export default function App(){
             {view==='search' && <SearchView search={search} results={searchResults} setView={setView} setSelectedModule={setSelectedModule}/>}
           </main>
 
-          {/* Bottom nav mobile */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#171923] border-t border-slate-200 dark:border-slate-800 flex justify-around py-2">
-            {[
-              {id:'dashboard', icon:'🏠'},
-              {id:'modules', icon:'📚'},
-              {id:'flashcards', icon:'🃏'},
-              {id:'quiz', icon:'🧠'},
-              {id:'lab', icon:'💻'},
-            ].map(n=>(
-              <button key={n.id} onClick={()=>setView(n.id as View)} className={`p-2.5 rounded-xl ${view===n.id?'bg-indigo-600 text-white':'text-slate-500'}`}>{n.icon}</button>
-            ))}
+          {/* Bottom nav mobile - improved */}
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#171923]/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 safe-area-pb">
+            <div className="flex items-center justify-between px-1 py-1.5">
+              {[
+                {id:'dashboard', icon:'🏠', label:'Inicio'},
+                {id:'modules', icon:'📚', label:'Temario'},
+                {id:'flashcards', icon:'🃏', label:'Cards'},
+                {id:'quiz', icon:'🧠', label:'Quiz'},
+                {id:'lab', icon:'💻', label:'Lab'},
+              ].map(n=>(
+                <button key={n.id} onClick={()=>setView(n.id as View)} className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-xl transition ${view===n.id?'text-indigo-600 dark:text-indigo-400':'text-slate-500 dark:text-slate-400'}`}>
+                  <span className={`w-7 h-7 grid place-items-center rounded-xl text-[18px] ${view===n.id?'bg-indigo-600 text-white shadow' : ''}`}>{n.icon}</span>
+                  <span className="text-[10px] font-semibold leading-none">{n.label}</span>
+                </button>
+              ))}
+              <button onClick={()=>setMobileMenu(true)} className="flex-1 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-xl text-slate-500 dark:text-slate-400">
+                <span className="w-7 h-7 grid place-items-center rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm">☰</span>
+                <span className="text-[10px] font-semibold leading-none">Más</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -202,19 +259,19 @@ export default function App(){
 function Dashboard({pct,completedCount,totalConcepts,answered,correct,needReview,progress,setView,setSelectedModule,moduleProgress,level,xpProg,showToast,setProgress}:any){
   const achievementsUnlocked = progress.xp>100?2: progress.xp>50?1:0
   return (
-    <div className="space-y-6">
-      <div className="rounded-[24px] bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 text-white p-6 lg:p-8 flex flex-col lg:flex-row gap-6 relative overflow-hidden">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="rounded-[20px] sm:rounded-[24px] bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 text-white p-5 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-5 sm:gap-6 relative overflow-hidden">
         <div className="absolute -right-10 -top-10 w-64 h-64 bg-white/10 rounded-full blur-2xl"/>
-        <div className="flex-1">
-          <div className="text-white/80 text-sm font-medium">¡Hola, Agustín! 👋</div>
-          <h1 className="text-3xl lg:text-4xl font-extrabold mt-1">Prepará tu final de<br/>Base de Datos 2 de forma inteligente.</h1>
-          <p className="text-white/80 mt-3 max-w-xl">Continuá donde dejaste. Llevás {completedCount} conceptos dominados y {answered} preguntas practicadas.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button onClick={()=>setView('session')} className="px-6 py-3 rounded-xl bg-white text-indigo-700 font-semibold hover:bg-slate-50">Continuar estudiando →</button>
-            <button onClick={()=>setView('modules')} className="px-6 py-3 rounded-xl bg-white/15 text-white border border-white/20 font-semibold">Empezar sesión de estudio</button>
+        <div className="flex-1 min-w-0">
+          <div className="text-white/80 text-xs sm:text-sm font-medium">¡Hola, Agustín! 👋</div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mt-1 leading-tight">Prepará tu final de<br className="hidden sm:block"/> Base de Datos 2 de forma inteligente.</h1>
+          <p className="text-white/80 mt-2 sm:mt-3 max-w-xl text-sm sm:text-base">Continuá donde dejaste. Llevás {completedCount} conceptos dominados y {answered} preguntas practicadas.</p>
+          <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+            <button onClick={()=>setView('session')} className="w-full sm:w-auto px-6 py-3 rounded-xl bg-white text-indigo-700 font-semibold hover:bg-slate-50 text-sm sm:text-base">Continuar estudiando →</button>
+            <button onClick={()=>setView('modules')} className="w-full sm:w-auto px-6 py-3 rounded-xl bg-white/15 text-white border border-white/20 font-semibold text-sm sm:text-base">Empezar sesión de estudio</button>
           </div>
         </div>
-        <div className="lg:w-[340px] bg-white rounded-2xl p-5 text-slate-800 shadow-xl">
+        <div className="w-full lg:w-[340px] shrink-0 bg-white rounded-2xl p-4 sm:p-5 text-slate-800 shadow-xl">
           <div className="text-sm font-semibold flex items-center justify-between">Tu progreso <span className="text-indigo-600">{pct}%</span></div>
           <div className="mt-3 flex items-center gap-4">
             <div className="w-20 h-20 rounded-full border-[6px] border-slate-100 relative flex items-center justify-center">
@@ -443,7 +500,7 @@ function FlashcardsView({progress,setProgress,showToast}:any){
         <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">{card.tag}</span>
       </div>
 
-      <div className="relative h-[380px]" style={{perspective:'1000px'}}>
+      <div className="relative h-[420px] sm:h-[380px]" style={{perspective:'1000px'}}>
         <div className="w-full h-full relative transition-all duration-700" style={{transformStyle:'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)'}}>
           {/* FRONT - Pregunta */}
           <div onClick={()=>setRevealed(true)} className="absolute inset-0 bg-white dark:bg-[#171923] rounded-[24px] border border-slate-200 dark:border-slate-800 p-6 sm:p-8 flex flex-col shadow-card cursor-pointer select-none" style={{backfaceVisibility:'hidden'}}>
