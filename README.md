@@ -1,4 +1,4 @@
-# BD2 MASTERY
+# BD2 FINAL
 
 **Prepará tu final de Base de Datos 2 de forma inteligente.**
 

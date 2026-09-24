@@ -14,7 +14,7 @@ function Logo(){
     <div className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-sm">BD2</div>
       <div>
-        <div className="font-extrabold leading-none text-slate-900 dark:text-white">BD2 MASTERY</div>
+        <div className="font-extrabold leading-none text-slate-900 dark:text-white">BD2 FINAL</div>
         <div className="text-[11px] text-slate-500 dark:text-slate-400 -mt-0.5">Base de Datos 2</div>
       </div>
     </div>
