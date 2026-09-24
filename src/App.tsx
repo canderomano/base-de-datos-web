@@ -6,6 +6,7 @@ import { exercises } from './data/exercises'
 import { commonErrors } from './data/commonErrors'
 import { achievements } from './data/achievements'
 import { evaluativeQuestions } from './data/evaluative'
+import { parciales } from './data/parciales'
 import type { View, Progress } from './types'
 import { loadProgress, saveProgress, getTheme, setTheme } from './utils/storage'
 import { xpToLevel, xpProgress } from './utils/helpers'
@@ -74,6 +75,7 @@ export default function App(){
     {id:'flashcards', label:'Flashcards', icon:'🃏'},
     {id:'quiz', label:'Cuestionarios', icon:'🧠'},
     {id:'evaluative', label:'Cuest. Evaluativo', icon:'📝'},
+    {id:'parciales', label:'Parciales Reales', icon:'🎓'},
     {id:'lab', label:'Laboratorio', icon:'💻'},
     {id:'simulacro', label:'Simulacro', icon:'🎯'},
     {id:'session', label:'Sesión', icon:'⚡'},
@@ -227,6 +229,7 @@ export default function App(){
             {view==='favorites' && <FavoritesView progress={progress} setProgress={setProgress}/>}
             {view==='errors' && <ErrorsView/>}
             {view==='evaluative' && <EvaluativeView progress={progress} setProgress={setProgress} showToast={showToast} />}
+            {view==='parciales' && <ParcialesView progress={progress} setProgress={setProgress} showToast={showToast} />}
             {view==='search' && <SearchView search={search} results={searchResults} setView={setView} setSelectedModule={setSelectedModule}/>}
           </main>
 
@@ -1180,6 +1183,206 @@ function EvaluativeView({progress,setProgress,showToast}:any){
 
         <div className="mt-4 flex justify-center">
           <button onClick={handleFinish} className="text-sm text-slate-500 underline">Entregar y ver resultado</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ParcialesView({progress,setProgress,showToast}:any){
+  const [selected, setSelected]=useState<string|null>(null)
+  const [idx,setIdx]=useState(0)
+  const [answers,setAnswers]=useState<Record<string,number>>({})
+  const [finished,setFinished]=useState(false)
+  const [time,setTime]=useState(0)
+  const [started,setStarted]=useState(false)
+  const parcial = parciales.find(p=>p.id===selected) || null
+  const total = parcial? parcial.questions.length : 0
+  const answeredCount = parcial ? Object.keys(answers).filter(k=> parcial.questions.some(q=>q.id===k)).length : 0
+  const correctCount = parcial ? parcial.questions.filter(q=> answers[q.id]===q.correct).length : 0
+  const pct = total? Math.round(correctCount/total*100):0
+
+  useEffect(()=>{
+    if(!started || !parcial || finished) return
+    const id=setInterval(()=> setTime(t=>t+1),1000)
+    return ()=> clearInterval(id)
+  },[started,parcial,finished])
+
+  const start=(id:string)=>{
+    setSelected(id); setIdx(0); setAnswers({}); setFinished(false); setTime(0); setStarted(true)
+  }
+  const handleFinish=()=>{
+    if(answeredCount < total){
+      if(!confirm(`Respondiste ${answeredCount}/${total}. ¿Entregar igual?`)) return
+    }
+    setFinished(true)
+    setProgress((p:any)=> ({...p, xp: p.xp + (pct>=70? 25: pct>=50?15:5) + 10}))
+    showToast(`Parcial entregado: ${correctCount}/${total} (${pct}%)`)
+  }
+  const reset=()=>{
+    setSelected(null); setIdx(0); setAnswers({}); setFinished(false); setTime(0); setStarted(false)
+  }
+
+  if(!started || !parcial){
+    return (
+      <div className="space-y-6">
+        <div className="rounded-[20px] sm:rounded-[24px] bg-gradient-to-br from-slate-900 via-indigo-900 to-violet-800 text-white p-6 sm:p-8 relative overflow-hidden">
+          <div className="absolute -right-10 -top-10 w-72 h-72 bg-white/10 rounded-full blur-2xl"/>
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-bold tracking-widest">🎓 PARCIALES REALES — BD2 FINAL</div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold mt-3">Simulacros de Parcial Real</h1>
+            <p className="text-white/85 mt-2 max-w-2xl text-sm sm:text-base">5 exámenes diseñados como en el final, 10 preguntas cada uno, con tipos variados (múltiple opción, V/F, elegir consulta, interpretar). Con tiempo, nota y revisión.</p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              <span className="px-3 py-1.5 rounded-full bg-white text-slate-900 font-bold">5 parciales • 50 preguntas</span>
+              <span className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 font-semibold">⏱ 15-20 min c/u</span>
+              <span className="px-3 py-1.5 rounded-full bg-emerald-400 text-white font-bold">Resp. mobile</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {parciales.map(p=>(
+            <div key={p.id} className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-card transition flex flex-col">
+              <div className={`h-2 bg-gradient-to-r ${p.color}`} />
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="flex items-start gap-3">
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${p.color} flex items-center justify-center text-white text-xl shrink-0`}>{p.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-bold tracking-widest text-slate-500">{p.subtitle.toUpperCase()}</div>
+                    <div className="font-bold leading-tight">{p.title}</div>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${p.difficulty==='Fácil'?'bg-emerald-50 text-emerald-700 border-emerald-200': p.difficulty==='Medio'?'bg-amber-50 text-amber-700 border-amber-200': p.difficulty==='Difícil'?'bg-orange-50 text-orange-700 border-orange-200':'bg-red-50 text-red-700 border-red-200'}`}>{p.difficulty}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs">⏱ {p.timeMin} min</span>
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-xs">{p.questions.length} preg.</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 line-clamp-3">{p.description}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {p.topics.map(t=> <span key={t} className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-medium">{t}</span>)}
+                </div>
+                <div className="mt-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-dashed text-xs text-slate-500">
+                  Tipos: {Array.from(new Set(p.questions.map(q=>q.type))).join(', ')} • Incluye SQL y análisis
+                </div>
+                <button onClick={()=>start(p.id)} className={`mt-4 w-full py-3 rounded-xl bg-gradient-to-r ${p.color} text-white font-bold hover:opacity-90 shadow`}>Comenzar parcial →</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="font-bold">¿Cómo estudiar con parciales reales?</div>
+          <div className="mt-3 grid sm:grid-cols-3 gap-3 text-sm">
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900"><b>1. Fundamentos</b><br/><span className="text-slate-600 dark:text-slate-400">Empezá por Parcial 1 y 5 (bases + PostgreSQL).</span></div>
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900"><b>2. Núcleo duro</b><br/><span className="text-slate-600 dark:text-slate-400">Luego Parcial 2 y 3 (EXISTS/CTE).</span></div>
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900"><b>3. Integrador</b><br/><span className="text-slate-600 dark:text-slate-400">Cerrá con Parcial 4 mixto, objetivo 80%+.</span></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if(finished){
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className={`rounded-2xl p-6 text-white text-center bg-gradient-to-br ${parcial.color}`}>
+          <div className="text-white/80 text-xs font-bold tracking-widest">{parcial.title.toUpperCase()}</div>
+          <div className="text-5xl font-black mt-1">{pct}%</div>
+          <div className="text-white/90">{correctCount}/{total} correctas • {Math.floor(time/60)}:{String(time%60).padStart(2,'0')}</div>
+          <div className="mt-3 flex justify-center gap-2">
+            {pct>=80 && <span className="px-3 py-1 rounded-full bg-white text-slate-900 text-sm font-bold">¡Excelente!</span>}
+            {pct>=60 && pct<80 && <span className="px-3 py-1 rounded-full bg-white/20 border border-white/30 text-sm font-bold">Aprobado</span>}
+            {pct<60 && <span className="px-3 py-1 rounded-full bg-red-500 text-white text-sm font-bold">A repasar</span>}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="font-bold">Revisión detallada</div>
+          <div className="mt-4 space-y-4">
+            {parcial.questions.map((q,i)=>{
+              const ans = answers[q.id]
+              const isCorrect = ans===q.correct
+              return (
+                <div key={q.id} className={`rounded-2xl border p-4 ${isCorrect?'border-emerald-200 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/10':'border-red-200 dark:border-red-900 bg-red-50/40 dark:bg-red-950/10'}`}>
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className={`px-2.5 py-1 rounded-full font-bold ${isCorrect?'bg-emerald-500 text-white':'bg-red-500 text-white'}`}>#{i+1} {isCorrect?'✓ Correcta':'✗ Incorrecta'}</span>
+                    <span className="text-slate-500">Tu: {ans!==undefined? String.fromCharCode(65+ans):'—'} • OK: {String.fromCharCode(65+q.correct)}</span>
+                  </div>
+                  <div className="font-semibold mt-2 text-sm sm:text-base">{q.question}</div>
+                  {q.code && <pre className="mt-2 p-2.5 rounded-xl bg-slate-900 text-slate-100 text-xs font-mono overflow-auto">{q.code}</pre>}
+                  <div className="mt-3 space-y-1.5">
+                    {q.options.map((op,oi)=>{
+                      const isC = oi===q.correct
+                      const isU = oi===ans
+                      let cls="bg-white dark:bg-slate-800 border-slate-200"
+                      if(isC) cls="bg-emerald-100 dark:bg-emerald-950/40 border-emerald-300 text-emerald-800 dark:text-emerald-200 font-semibold"
+                      else if(isU && !isC) cls="bg-red-100 dark:bg-red-950/40 border-red-300 text-red-800 dark:text-red-200"
+                      return <div key={oi} className={`p-2.5 rounded-xl border text-sm flex gap-2 ${cls}`}><span className="font-bold">{String.fromCharCode(65+oi)}.</span><span>{op}</span>{isC && <span className="ml-auto">✓</span>}</div>
+                    })}
+                  </div>
+                  <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-800 border text-sm"><span className="font-bold text-indigo-700 dark:text-indigo-300">Por qué:</span> {q.explanation}</div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            <button onClick={reset} className="flex-1 py-3 rounded-xl bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-bold">Elegir otro parcial</button>
+            <button onClick={()=>{ setFinished(false); setIdx(0)}} className="flex-1 py-3 rounded-xl border bg-white dark:bg-slate-800 font-bold">Rehacer este</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const q = parcial.questions[idx]
+  const letters=['A','B','C','D','E']
+  const progressPct = Math.round((answeredCount/total)*100)
+  return (
+    <div className="max-w-6xl mx-auto grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6">
+      <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 h-fit lg:sticky lg:top-[72px]">
+        <div className="text-xs font-bold tracking-widest text-slate-500">{parcial.subtitle.toUpperCase()}</div>
+        <div className="font-bold leading-tight">{parcial.title}</div>
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800">⏱ {Math.floor(time/60)}:{String(time%60).padStart(2,'0')} / {parcial.timeMin}:00</span>
+          <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 font-bold">{answeredCount}/{total}</span>
+        </div>
+        <div className="mt-3 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all" style={{width:`${progressPct}%`}}/></div>
+        <div className="mt-4 grid grid-cols-5 gap-1.5">
+          {parcial.questions.map((qq,i)=>{
+            const answered = answers[qq.id]!==undefined
+            const cur = i===idx
+            return <button key={qq.id} onClick={()=>setIdx(i)} className={`h-10 rounded-xl font-bold border flex items-center justify-center text-sm ${cur?'bg-indigo-600 text-white border-indigo-600 shadow': answered?'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 border-emerald-200':'bg-slate-50 dark:bg-slate-800 border-slate-200'}`}>{i+1}</button>
+          })}
+        </div>
+        <div className="mt-4 space-y-2">
+          <button onClick={handleFinish} className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700">Entregar parcial</button>
+          <button onClick={()=> { if(confirm('¿Salir sin guardar?')) reset()}} className="w-full py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-sm font-semibold">Salir</button>
+        </div>
+        <div className="mt-3 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 text-xs">
+          <b>Temas:</b> {parcial.topics.join(' • ')}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-[#171923] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="px-2.5 py-1 rounded-full bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-bold">Pregunta {idx+1} / {total}</span>
+          <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800">{q.type}</span>
+          {answers[q.id]!==undefined ? <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Respondida: {letters[answers[q.id]]}</span> : <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700">Pendiente</span>}
+        </div>
+        <h2 className="font-bold text-[15px] sm:text-lg leading-relaxed mt-4">{q.question}</h2>
+        {q.code && <pre className="mt-3 p-3 rounded-xl bg-slate-900 text-slate-100 text-xs sm:text-sm font-mono overflow-auto">{q.code}</pre>}
+        <div className="mt-4 space-y-2">
+          {q.options.map((op,oi)=>{
+            const sel = answers[q.id]===oi
+            return <button key={oi} onClick={()=> setAnswers(prev=> ({...prev, [q.id]:oi}))} className={`w-full text-left p-3 rounded-xl border text-sm flex gap-3 items-start ${sel?'bg-indigo-600 text-white border-indigo-600 shadow':'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-white'}`}>
+              <span className={`w-7 h-7 rounded-full grid place-items-center font-black text-xs shrink-0 ${sel?'bg-white text-indigo-700':'bg-white dark:bg-slate-900 border'}`}>{letters[oi]}</span>
+              <span className="flex-1 leading-snug">{op}</span>
+            </button>
+          })}
+        </div>
+        <div className="mt-6 flex justify-between gap-3">
+          <button disabled={idx===0} onClick={()=>setIdx(i=>Math.max(0,i-1))} className="px-5 py-3 rounded-xl border bg-white dark:bg-slate-800 font-semibold disabled:opacity-40 text-sm">← Anterior</button>
+          {idx===total-1 ? <button onClick={handleFinish} className="px-7 py-3 rounded-xl bg-emerald-600 text-white font-bold">Entregar →</button> : <button onClick={()=>setIdx(i=>Math.min(total-1,i+1))} className="px-7 py-3 rounded-xl bg-indigo-600 text-white font-bold">Siguiente →</button>}
         </div>
       </div>
     </div>
